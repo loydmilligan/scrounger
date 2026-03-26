@@ -1,0 +1,236 @@
+{
+  "name": "Scrounger - Reddit Email to Webhook v2",
+  "nodes": [
+    {
+      "parameters": {
+        "pollTimes": {
+          "item": [
+            {
+              "mode": "everyMinute"
+            }
+          ]
+        },
+        "filters": {
+          "readStatus": "unread",
+          "sender": "noreply@redditmail.com"
+        }
+      },
+      "id": "fc9c61a3-f144-4808-b2ac-49d239d3f647",
+      "name": "Gmail Trigger",
+      "type": "n8n-nodes-base.gmailTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        -300,
+        0
+      ],
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "LfEKExTCSFH2grUh",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "returnAll": false,
+        "limit": 10,
+        "filters": {
+          "sender": "noreply@redditmail.com",
+          "readStatus": "unread"
+        },
+        "options": {}
+      },
+      "id": "95e8a583-0cff-4401-ae1e-5e19f4245eb6",
+      "name": "Get Reddit Emails",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        -60,
+        0
+      ],
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "LfEKExTCSFH2grUh",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": false,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "chat-request",
+              "leftValue": "={{ $json.Subject }}",
+              "rightValue": "chat request",
+              "operator": {
+                "type": "string",
+                "operation": "contains"
+              }
+            },
+            {
+              "id": "new-message",
+              "leftValue": "={{ $json.Subject }}",
+              "rightValue": "new message",
+              "operator": {
+                "type": "string",
+                "operation": "contains"
+              }
+            },
+            {
+              "id": "replied-post",
+              "leftValue": "={{ $json.Subject }}",
+              "rightValue": "replied to your post",
+              "operator": {
+                "type": "string",
+                "operation": "contains"
+              }
+            },
+            {
+              "id": "replied-comment",
+              "leftValue": "={{ $json.Subject }}",
+              "rightValue": "replied to your comment",
+              "operator": {
+                "type": "string",
+                "operation": "contains"
+              }
+            }
+          ],
+          "combinator": "or"
+        },
+        "options": {}
+      },
+      "id": "11176874-2a4b-4699-937d-6d60272168e2",
+      "name": "Filter Message Types",
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 2,
+      "position": [
+        180,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://192.168.5.255:8849/api/webhook/reddit-email",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"from_email\": {{ JSON.stringify($json.From) }},\n  \"to_email\": {{ JSON.stringify($json.To) }},\n  \"subject\": {{ JSON.stringify($json.Subject) }},\n  \"body\": {{ JSON.stringify($json.textPlain || $json.snippet || '') }},\n  \"date\": {{ JSON.stringify($json.Date || $json.internalDate || '') }},\n  \"message_id\": {{ JSON.stringify($json.id) }}\n}",
+        "options": {
+          "response": {
+            "response": {
+              "fullResponse": false
+            }
+          }
+        }
+      },
+      "id": "5418105e-49f9-47a6-a738-42b5b52927d3",
+      "name": "Send to Scrounger",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        420,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "addLabels",
+        "messageId": "={{ $('Filter Message Types').item.json.id }}",
+        "labelIds": [
+          "Label_7774221396119431160"
+        ]
+      },
+      "id": "149c4aca-20de-417c-8589-ee499807d7ce",
+      "name": "Mark as Processed",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        660,
+        0
+      ],
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "LfEKExTCSFH2grUh",
+          "name": "Gmail account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Gmail Trigger": {
+      "main": [
+        [
+          {
+            "node": "Get Reddit Emails",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Reddit Emails": {
+      "main": [
+        [
+          {
+            "node": "Filter Message Types",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Filter Message Types": {
+      "main": [
+        [
+          {
+            "node": "Send to Scrounger",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send to Scrounger": {
+      "main": [
+        [
+          {
+            "node": "Mark as Processed",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "v2-deduped",
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
+  "tags": [
+    {
+      "name": "scrounger"
+    }
+  ]
+}
