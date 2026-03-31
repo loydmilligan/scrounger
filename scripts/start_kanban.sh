@@ -4,6 +4,7 @@ cd /home/mmariani/scrounger
 kill_kanban() {
     pkill -f "server.py" 2>/dev/null
     pkill chromium 2>/dev/null
+    pkill matchbox-window-manager 2>/dev/null
     echo "Killed kanban processes"
 }
 
@@ -26,20 +27,19 @@ sudo /usr/bin/Xorg :0 &
 sleep 2
 export DISPLAY=:0
 
-# Get screen resolution
-SCREEN_SIZE=$(xdotool getdisplaygeometry)
-SCREEN_W=$(echo $SCREEN_SIZE | cut -d' ' -f1)
-SCREEN_H=$(echo $SCREEN_SIZE | cut -d' ' -f2)
+# Start matchbox window manager (handles window positioning)
+matchbox-window-manager -use-cursor yes &
+sleep 1
 
 # Start chromium
 chromium --kiosk --incognito http://localhost:8001/kanban.html &
 sleep 4
 
-# Find and resize Chromium window to full screen
-WINID=$(xdotool search --name chromium | head -1)
+# Get screen size and resize
+SCREEN_W=3440
+SCREEN_H=1440
+WINID=$(xdotool search --class chromium | head -1)
 if [ -n "$WINID" ]; then
     xdotool windowsize $WINID $SCREEN_W $SCREEN_H
     xdotool windowmove $WINID 0 0
-    xdotool windowfocus $WINID
-    xdotool key F11
 fi
