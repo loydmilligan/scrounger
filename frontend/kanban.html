@@ -243,14 +243,25 @@
         const DAYS_3_YEARS = 1095;
         const MIN_VALUE_PCT = 0.20;
         
-        function excelToDate(excelDate) {
-            return new Date(1899, 11, 30 + excelDate);
+        function parseDate(dateStr) {
+            if (!dateStr) return null;
+            if (typeof dateStr === 'number') {
+                return new Date(1899, 11, 30 + dateStr);
+            }
+            const parts = dateStr.split('/');
+            if (parts.length === 3) {
+                return new Date(parts[2], parts[0] - 1, parts[1]);
+            }
+            return new Date(dateStr);
         }
         
         function calculateCurrentValue(retailPrice, datePurchase) {
             if (!retailPrice || !datePurchase) return retailPrice || 0;
             
-            const daysOwned = (new Date() - excelToDate(datePurchase)) / (1000 * 60 * 60 * 24);
+            const purchaseDate = parseDate(datePurchase);
+            if (!purchaseDate) return retailPrice;
+            
+            const daysOwned = (new Date() - purchaseDate) / (1000 * 60 * 60 * 24);
             
             if (daysOwned <= 0) return retailPrice;
             if (daysOwned >= DAYS_3_YEARS) return Math.round(retailPrice * MIN_VALUE_PCT * 100) / 100;
@@ -266,21 +277,21 @@
             const now = new Date();
             
             if (status === 'PAID' && item.datePaid) {
-                const paidDate = excelToDate(item.datePaid);
+                const paidDate = parseDate(item.datePaid);
                 const deadline = new Date(paidDate);
                 deadline.setDate(deadline.getDate() + 5);
                 return { deadline, action: 'Ship', daysLeft: Math.ceil((deadline - now) / (1000 * 60 * 60 * 24)) };
             }
             
             if (status === 'SHIPPED' && item.datePaid) {
-                const paidDate = excelToDate(item.datePaid);
+                const paidDate = parseDate(item.datePaid);
                 const deadline = new Date(paidDate);
                 deadline.setDate(deadline.getDate() + 5);
                 return { deadline, action: 'Deliver', daysLeft: Math.ceil((deadline - now) / (1000 * 60 * 60 * 24)) };
             }
             
             if (status === 'DELIVERED' && item.dateDelivered) {
-                const deliveredDate = excelToDate(item.dateDelivered);
+                const deliveredDate = parseDate(item.dateDelivered);
                 const deadline = new Date(deliveredDate);
                 deadline.setDate(deadline.getDate() + 3);
                 return { deadline, action: 'Confirm', daysLeft: Math.ceil((deadline - now) / (1000 * 60 * 60 * 24)) };
