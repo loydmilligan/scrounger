@@ -9,4 +9,4 @@ nohup .venv/bin/python scripts/server.py > /tmp/kanban_server.log 2>&1 &
 sleep 2
 
 # Start X with Chromium in fullscreen kiosk mode
-exec sudo xinit chromium --kiosk --incognito http://localhost:8001/kanban.html -- --screen 0 1920x1080
+exec sudo xinit chromium --kiosk --incognito http://localhost:8001/kanban.html
