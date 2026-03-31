@@ -11,7 +11,6 @@ from datetime import datetime, timedelta
 from rich.console import Console
 from rich.panel import Panel
 from rich.text import Text
-from rich.box import Box
 import time
 
 SHEET_NINJA_ENDPOINT = os.getenv("SHEET_NINJA_ENDPOINT_URL")
@@ -19,16 +18,6 @@ SHEET_NINJA_API_KEY = os.getenv("SHEET_NINJA_API_KEY")
 
 DAYS_3_YEARS = 1095
 MIN_VALUE_PCT = 0.20
-FEEDBACK_TIMER_DAYS = 3
-
-def excel_date_to_datetime(excel_date):
-    if not excel_date:
-        return None
-    try:
-        excel_date = int(excel_date)
-        return datetime(1899, 12, 30) + timedelta(days=excel_date)
-    except:
-        return None
 
 def calculate_current_value(retail_price, date_purchase):
     if not retail_price or not date_purchase:
@@ -73,7 +62,7 @@ def get_deadline_info(item, now):
         date_delivered = item.get("dateDelivered")
         if date_delivered:
             delivered_dt = datetime(1899, 12, 30) + timedelta(days=int(date_delivered))
-            deadline = delivered_dt + timedelta(days=FEEDBACK_TIMER_DAYS)
+            deadline = delivered_dt + timedelta(days=3)
             return deadline, "Confirm"
     
     return None, None
@@ -116,22 +105,38 @@ def update_current_values(items):
             )
             item["currentValue"] = current_value
 
-STATUS_ORDER = ["INVENTORY", "DRAFT", "LISTED", "INTEREST", "AGREEMENT", "PAID", "SHIPPED", "DELIVERED", "COMPLETE", "DISPUTE"]
+STATUS_ORDER = ["AGREEMENT", "PAID", "PRINTED", "PACKAGED", "SHIPPED", "DELIVERED", "CONFIRMED", "COMPLETE"]
+
+def map_status_to_bucket(status):
+    s = status.upper() if status else "INVENTORY"
+    mapping = {
+        "AGREED": "AGREEMENT",
+        "AGREEMENT": "AGREEMENT",
+        "PAID": "PAID",
+        "PRINTED": "PRINTED",
+        "PRINTED SHIPPING LABEL": "PRINTED",
+        "LABEL PRINTED": "PRINTED",
+        "PACKAGED": "PACKAGED",
+        "PACKED": "PACKAGED",
+        "SHIPPED": "SHIPPED",
+        "DELIVERED": "DELIVERED",
+        "CONFIRMED": "CONFIRMED",
+        "COMPLETE": "COMPLETE",
+        "ARCHIVED": "COMPLETE",
+    }
+    return mapping.get(s, "AGREEMENT")
 
 def group_by_status(items):
     buckets = {s: [] for s in STATUS_ORDER}
     
     for item in items:
-        status = item.get("status", "INVENTORY").upper()
-        if status in buckets:
-            buckets[status].append(item)
-        else:
-            buckets["INVENTORY"].append(item)
+        bucket = map_status_to_bucket(item.get("status", ""))
+        buckets[bucket].append(item)
     
     return buckets
 
-def render_card(item, now, console):
-    name = item.get("itemName", "Unknown")[:20]
+def render_card(item, now):
+    name = item.get("itemName", "Unknown")[:25]
     sale_price = item.get("salePrice", 0)
     current_value = item.get("currentValue", 0)
     marketplace = item.get("marketplace", "")
@@ -139,34 +144,23 @@ def render_card(item, now, console):
     deadline, deadline_action = get_deadline_info(item, now)
     urgency = get_urgency_color(deadline, now)
     
-    color_map = {
-        "green": "green",
-        "yellow": "yellow", 
-        "orange": "orange",
-        "red": "red bold"
-    }
-    
-    color = color_map[urgency]
-    
     lines = []
-    lines.append(f"[{color}]{name}[/{color}]")
-    lines.append(f"  ${sale_price} | Val: ${current_value}")
-    
+    lines.append(f"[bold {urgency}]{name}[/bold {urgency}]")
+    lines.append(f"[bold]${sale_price}[/bold] | Val: ${current_value}")
     if marketplace:
-        lines.append(f"  [dim]{marketplace}[/dim]")
-    
+        lines.append(f"[dim]{marketplace}[/dim]")
     if deadline:
         days_left = (deadline - now).days
         if days_left >= 0:
-            lines.append(f"  [{color}]{deadline_action}: {days_left}d[/{color}]")
+            lines.append(f"[bold {urgency}]{deadline_action}: {days_left}d[/bold {urgency}]")
         else:
-            lines.append(f"  [red]{deadline_action}: OVERDUE![/red]")
+            lines.append(f"[bold red]OVERDUE![/bold red]")
     
     text = Text("\n".join(lines))
-    return Panel(text, border_style=urgency, padding=(0, 1), width=25)
+    return Panel(text, border_style=urgency, padding=(0, 1), width=28)
 
 def main(once=False):
-    console = Console(force_terminal=True, width=120)
+    console = Console(force_terminal=True)
     now = datetime.now()
     
     while True:
@@ -179,16 +173,24 @@ def main(once=False):
             
             console.clear()
             
-            console.print(f"[bold cyan]Scrounger Sales Funnel[/bold cyan] [dim]{now.strftime('%H:%M:%S')}[/dim]")
+            console.print(f"[bold cyan reverse]  SCRQUINGER SALES FUNNEL  [/bold cyan reverse]  [dim]{now.strftime('%H:%M:%S')}[/dim]")
             console.print()
             
+            header = ""
             for status in STATUS_ORDER:
-                status_items = buckets[status]
-                if status_items:
-                    console.print(f"[bold magenta reverse]{status} ({len(status_items)})[/bold magenta reverse]")
-                    for item in status_items:
-                        console.print(render_card(item, now, console), end="")
-                    console.print()
+                count = len(buckets[status])
+                header += f"[bold magenta reverse] {status} ({count}) [/bold magenta reverse]  "
+            console.print(header)
+            console.print()
+            
+            max_rows = max(len(buckets[s]) for s in STATUS_ORDER)
+            for i in range(max_rows):
+                for status in STATUS_ORDER:
+                    if i < len(buckets[status]):
+                        console.print(render_card(buckets[status][i], now), end=" ")
+                    else:
+                        console.print(" " * 28, end=" ")
+                console.print()
             
             if once:
                 break
