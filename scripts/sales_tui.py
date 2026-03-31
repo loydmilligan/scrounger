@@ -149,8 +149,8 @@ def render_card(item, now, console):
     color = color_map[urgency]
     
     lines = []
-    lines.append(f"[bold {color}]{name}[/bold {color}]")
-    lines.append(f"  [bold yellow]${sale_price}[/bold yellow] | Val: [bold]${current_value}[/bold]")
+    lines.append(f"[{color}]{name}[/{color}]")
+    lines.append(f"  ${sale_price} | Val: ${current_value}")
     
     if marketplace:
         lines.append(f"  [dim]{marketplace}[/dim]")
@@ -158,9 +158,9 @@ def render_card(item, now, console):
     if deadline:
         days_left = (deadline - now).days
         if days_left >= 0:
-            lines.append(f"  [bold {color}]{deadline_action}: {days_left}d[/bold {color}]")
+            lines.append(f"  [{color}]{deadline_action}: {days_left}d[/{color}]")
         else:
-            lines.append(f"  [bold red]{deadline_action}: OVERDUE![/bold red]")
+            lines.append(f"  [red]{deadline_action}: OVERDUE![/red]")
     
     text = Text("\n".join(lines))
     return Panel(text, border_style=urgency, padding=(0, 1), width=30)
