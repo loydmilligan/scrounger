@@ -21,8 +21,12 @@ kill_kanban
 nohup .venv/bin/python scripts/server.py > /tmp/kanban_server.log 2>&1 &
 sleep 2
 
-# Start X server and Chromium
+# Start X server and Chromium in true fullscreen
 sudo /usr/bin/Xorg :0 &
 sleep 2
 export DISPLAY=:0
-chromium --kiosk --incognito --fullscreen http://localhost:8001/kanban.html
+
+# Use xdotool to force fullscreen window
+chromium --kiosk --incognito http://localhost:8001/kanban.html &
+sleep 3
+xdotool key F11
