@@ -163,10 +163,10 @@ def render_card(item, now, console):
             lines.append(f"  [bold red]{deadline_action}: OVERDUE![/bold red]")
     
     text = Text("\n".join(lines))
-    return Panel(text, border_style=urgency, padding=(1, 1), width=35)
+    return Panel(text, border_style=urgency, padding=(0, 1), width=30)
 
 def main(once=False):
-    console = Console(force_terminal=True, width=250)
+    console = Console(force_terminal=True, width=180)
     now = datetime.now()
     
     while True:
