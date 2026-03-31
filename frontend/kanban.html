@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Scrounger Sales Funnel</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Arial, sans-serif;
+            background: #1a1a2e;
+            color: #eee;
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        h1 {
+            text-align: center;
+            font-size: 4rem;
+            color: #00d4ff;
+            margin-bottom: 30px;
+            text-transform: uppercase;
+            letter-spacing: 4px;
+        }
+        
+        .kanban {
+            display: flex;
+            gap: 20px;
+            overflow-x: auto;
+            padding-bottom: 20px;
+        }
+        
+        .column {
+            min-width: 300px;
+            flex: 1;
+            background: #16213e;
+            border-radius: 15px;
+            padding: 20px;
+            border: 3px solid #0f3460;
+        }
+        
+        .column-header {
+            font-size: 2rem;
+            font-weight: bold;
+            text-align: center;
+            padding: 15px;
+            margin-bottom: 20px;
+            border-radius: 10px;
+            background: #0f3460;
+        }
+        
+        .column-header.agreement { background: #636e72; }
+        .column-header.paid { background: #0984e3; }
+        .column-header.printed { background: #6c5ce7; }
+        .column-header.packaged { background: #a29bfe; color: #333; }
+        .column-header.shipped { background: #00b894; color: #333; }
+        .column-header.delivered { background: #fdcb6e; color: #333; }
+        .column-header.confirmed { background: #e17055; }
+        .column-header.complete { background: #00cec9; color: #333; }
+        
+        .card {
+            background: #0f3460;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 15px;
+            border-left: 8px solid #00d4ff;
+            transition: transform 0.2s;
+        }
+        
+        .card:hover {
+            transform: scale(1.02);
+        }
+        
+        .card.green { border-left-color: #00b894; }
+        .card.yellow { border-left-color: #fdcb6e; }
+        .card.orange { border-left-color: #e17055; }
+        .card.red { border-left-color: #d63031; animation: pulse 1s infinite; }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+        
+        .card-title {
+            font-size: 1.8rem;
+            font-weight: bold;
+            margin-bottom: 10px;
+            color: #fff;
+        }
+        
+        .card-price {
+            font-size: 2rem;
+            color: #fdcb6e;
+            font-weight: bold;
+        }
+        
+        .card-value {
+            font-size: 1.2rem;
+            color: #aaa;
+        }
+        
+        .card-marketplace {
+            font-size: 1.2rem;
+            color: #74b9ff;
+            margin: 10px 0;
+        }
+        
+        .card-deadline {
+            font-size: 1.5rem;
+            font-weight: bold;
+            margin-top: 10px;
+            padding: 8px;
+            border-radius: 5px;
+            text-align: center;
+        }
+        
+        .card-deadline.green { background: #00b894; color: #fff; }
+        .card-deadline.yellow { background: #fdcb6e; color: #333; }
+        .card-deadline.orange { background: #e17055; color: #fff; }
+        .card-deadline.red { background: #d63031; color: #fff; }
+        
+        .empty {
+            text-align: center;
+            color: #555;
+            font-size: 1.5rem;
+            padding: 40px;
+        }
+        
+        .last-updated {
+            text-align: center;
+            color: #555;
+            font-size: 1.2rem;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Scrounger Sales Funnel</h1>
+    <div class="kanban" id="kanban"></div>
+    <div class="last-updated" id="updated"></div>
+    
+    <script>
+        const STATUS_ORDER = ['AGREEMENT', 'PAID', 'PRINTED', 'PACKAGED', 'SHIPPED', 'DELIVERED', 'CONFIRMED', 'COMPLETE'];
+        
+        const STATUS_MAP = {
+            'AGREED': 'AGREEMENT',
+            'INVENTORY': 'AGREEMENT',
+            'DRAFT': 'AGREEMENT',
+            'LISTED': 'AGREEMENT',
+            'INTEREST': 'AGREEMENT',
+            'PAID': 'PAID',
+            'PRINTED': 'PRINTED',
+            'PRINTED SHIPPING LABEL': 'PRINTED',
+            'LABEL PRINTED': 'PRINTED',
+            'PACKAGED': 'PACKAGED',
+            'PACKED': 'PACKAGED',
+            'SHIPPED': 'SHIPPED',
+            'DELIVERED': 'DELIVERED',
+            'CONFIRMED': 'CONFIRMED',
+            'COMPLETE': 'COMPLETE',
+            'ARCHIVED': 'COMPLETE',
+            'DISPUTE': 'COMPLETE'
+        };
+        
+        const DAYS_3_YEARS = 1095;
+        const MIN_VALUE_PCT = 0.20;
+        
+        function excelToDate(excelDate) {
+            return new Date(1899, 11, 30 + excelDate);
+        }
+        
+        function calculateCurrentValue(retailPrice, datePurchase) {
+            if (!retailPrice || !datePurchase) return retailPrice || 0;
+            
+            const daysOwned = (new Date() - excelToDate(datePurchase)) / (1000 * 60 * 60 * 24);
+            
+            if (daysOwned <= 0) return retailPrice;
+            if (daysOwned >= DAYS_3_YEARS) return Math.round(retailPrice * MIN_VALUE_PCT * 100) / 100;
+            
+            const logDecay = Math.log(1 + daysOwned) / Math.log(1 + DAYS_3_YEARS);
+            const currentPct = MIN_VALUE_PCT + (1 - MIN_VALUE_PCT) * (1 - logDecay);
+            
+            return Math.round(retailPrice * currentPct * 100) / 100;
+        }
+        
+        function getDeadlineInfo(item) {
+            const status = (item.status || '').toUpperCase();
+            const now = new Date();
+            
+            if (status === 'PAID' && item.datePaid) {
+                const paidDate = excelToDate(item.datePaid);
+                const deadline = new Date(paidDate);
+                deadline.setDate(deadline.getDate() + 5);
+                return { deadline, action: 'Ship', daysLeft: Math.ceil((deadline - now) / (1000 * 60 * 60 * 24)) };
+            }
+            
+            if (status === 'SHIPPED' && item.datePaid) {
+                const paidDate = excelToDate(item.datePaid);
+                const deadline = new Date(paidDate);
+                deadline.setDate(deadline.getDate() + 5);
+                return { deadline, action: 'Deliver', daysLeft: Math.ceil((deadline - now) / (1000 * 60 * 60 * 24)) };
+            }
+            
+            if (status === 'DELIVERED' && item.dateDelivered) {
+                const deliveredDate = excelToDate(item.dateDelivered);
+                const deadline = new Date(deliveredDate);
+                deadline.setDate(deadline.getDate() + 3);
+                return { deadline, action: 'Confirm', daysLeft: Math.ceil((deadline - now) / (1000 * 60 * 60 * 24)) };
+            }
+            
+            return null;
+        }
+        
+        function getUrgencyColor(deadlineInfo) {
+            if (!deadlineInfo) return 'green';
+            const { daysLeft } = deadlineInfo;
+            
+            if (daysLeft <= 0) return 'red';
+            if (daysLeft <= 1) return 'orange';
+            if (daysLeft <= 3) return 'yellow';
+            return 'green';
+        }
+        
+        async function fetchData() {
+            const response = await fetch('http://localhost:8000/api/sales');
+            const data = await response.json();
+            return data;
+        }
+        
+        async function render() {
+            try {
+                const items = await fetchData();
+                
+                const buckets = {};
+                STATUS_ORDER.forEach(s => buckets[s] = []);
+                
+                items.forEach(item => {
+                    const bucket = STATUS_MAP[(item.status || '').toUpperCase()] || 'AGREEMENT';
+                    if (buckets[bucket]) {
+                        item.currentValue = calculateCurrentValue(item.retailPrice, item.datePurchase);
+                        buckets[bucket].push(item);
+                    }
+                });
+                
+                const kanban = document.getElementById('kanban');
+                kanban.innerHTML = '';
+                
+                STATUS_ORDER.forEach(status => {
+                    const column = document.createElement('div');
+                    column.className = 'column';
+                    
+                    const header = document.createElement('div');
+                    header.className = `column-header ${status.toLowerCase()}`;
+                    header.textContent = `${status} (${buckets[status].length})`;
+                    column.appendChild(header);
+                    
+                    if (buckets[status].length === 0) {
+                        const empty = document.createElement('div');
+                        empty.className = 'empty';
+                        empty.textContent = '-- empty --';
+                        column.appendChild(empty);
+                    } else {
+                        buckets[status].forEach(item => {
+                            const deadlineInfo = getDeadlineInfo(item);
+                            const urgency = getUrgencyColor(deadlineInfo);
+                            
+                            const card = document.createElement('div');
+                            card.className = `card ${urgency}`;
+                            
+                            const title = document.createElement('div');
+                            title.className = 'card-title';
+                            title.textContent = item.itemName || 'Unknown';
+                            card.appendChild(title);
+                            
+                            const price = document.createElement('div');
+                            price.className = 'card-price';
+                            price.textContent = `$${item.salePrice || 0}`;
+                            card.appendChild(price);
+                            
+                            const value = document.createElement('div');
+                            value.className = 'card-value';
+                            value.textContent = `Value: $${item.currentValue || 0}`;
+                            card.appendChild(value);
+                            
+                            if (item.marketplace) {
+                                const marketplace = document.createElement('div');
+                                marketplace.className = 'card-marketplace';
+                                marketplace.textContent = item.marketplace;
+                                card.appendChild(marketplace);
+                            }
+                            
+                            if (deadlineInfo) {
+                                const deadline = document.createElement('div');
+                                deadline.className = `card-deadline ${urgency}`;
+                                if (deadlineInfo.daysLeft <= 0) {
+                                    deadline.textContent = `${deadlineInfo.action}: OVERDUE!`;
+                                } else {
+                                    deadline.textContent = `${deadlineInfo.action}: ${deadlineInfo.daysLeft}d`;
+                                }
+                                card.appendChild(deadline);
+                            }
+                            
+                            column.appendChild(card);
+                        });
+                    }
+                    
+                    kanban.appendChild(column);
+                });
+                
+                document.getElementById('updated').textContent = `Updated: ${new Date().toLocaleTimeString()}`;
+            } catch (e) {
+                console.error(e);
+            }
+        }
+        
+        render();
+        setInterval(render, 30000);
+    </script>
+</body>
+</html>
