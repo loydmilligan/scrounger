@@ -25,4 +25,4 @@ sleep 2
 sudo /usr/bin/Xorg :0 &
 sleep 2
 export DISPLAY=:0
-chromium --kiosk --incognito --start-maximized --window-size=3440,1440 http://localhost:8001/kanban.html
+chromium --kiosk --incognito --start-maximized --window-position=0,0 http://localhost:8001/kanban.html
