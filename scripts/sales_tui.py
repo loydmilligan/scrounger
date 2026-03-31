@@ -9,11 +9,9 @@ project_root = os.path.dirname(script_dir)
 load_dotenv(os.path.join(project_root, ".env"))
 from datetime import datetime, timedelta
 from rich.console import Console
-from rich.table import Table
-from rich.live import Live
-from rich.layout import Layout
 from rich.panel import Panel
 from rich.text import Text
+from rich.box import Box
 import time
 
 SHEET_NINJA_ENDPOINT = os.getenv("SHEET_NINJA_ENDPOINT_URL")
@@ -21,6 +19,7 @@ SHEET_NINJA_API_KEY = os.getenv("SHEET_NINJA_API_KEY")
 
 DAYS_3_YEARS = 1095
 MIN_VALUE_PCT = 0.20
+FEEDBACK_TIMER_DAYS = 3
 
 def excel_date_to_datetime(excel_date):
     if not excel_date:
@@ -53,6 +52,47 @@ def calculate_current_value(retail_price, date_purchase):
     except:
         return retail_price if retail_price else 0
 
+def get_deadline_info(item, now):
+    status = item.get("status", "").upper()
+    
+    if status == "PAID":
+        date_paid = item.get("datePaid")
+        if date_paid:
+            paid_dt = datetime(1899, 12, 30) + timedelta(days=int(date_paid))
+            deadline = paid_dt + timedelta(days=5)
+            return deadline, "Ship"
+    
+    elif status == "SHIPPED":
+        date_paid = item.get("datePaid")
+        if date_paid:
+            paid_dt = datetime(1899, 12, 30) + timedelta(days=int(date_paid))
+            deadline = paid_dt + timedelta(days=5)
+            return deadline, "Deliver"
+    
+    elif status == "DELIVERED":
+        date_delivered = item.get("dateDelivered")
+        if date_delivered:
+            delivered_dt = datetime(1899, 12, 30) + timedelta(days=int(date_delivered))
+            deadline = delivered_dt + timedelta(days=FEEDBACK_TIMER_DAYS)
+            return deadline, "Confirm"
+    
+    return None, None
+
+def get_urgency_color(deadline, now):
+    if not deadline:
+        return "green"
+    
+    days_left = (deadline - now).days
+    
+    if days_left <= 0:
+        return "red"
+    elif days_left <= 1:
+        return "bright red"
+    elif days_left <= 3:
+        return "yellow"
+    else:
+        return "green"
+
 def fetch_sales():
     headers = {"Authorization": f"Bearer {SHEET_NINJA_API_KEY}"}
     response = requests.get(SHEET_NINJA_ENDPOINT, headers=headers)
@@ -76,24 +116,10 @@ def update_current_values(items):
             )
             item["currentValue"] = current_value
 
-def get_status_bucket(status):
-    status = status.upper() if status else "INVENTORY"
-    buckets = {
-        "INVENTORY": 0,
-        "DRAFT": 1,
-        "LISTED": 2,
-        "INTEREST": 3,
-        "AGREEMENT": 4,
-        "PAID": 5,
-        "SHIPPED": 6,
-        "DELIVERED": 7,
-        "COMPLETE": 8,
-        "DISPUTE": 9,
-    }
-    return buckets.get(status, 0)
+STATUS_ORDER = ["INVENTORY", "DRAFT", "LISTED", "INTEREST", "AGREEMENT", "PAID", "SHIPPED", "DELIVERED", "COMPLETE", "DISPUTE"]
 
 def group_by_status(items):
-    buckets = {s: [] for s in ["INVENTORY", "DRAFT", "LISTED", "INTEREST", "AGREEMENT", "PAID", "SHIPPED", "DELIVERED", "COMPLETE", "DISPUTE"]}
+    buckets = {s: [] for s in STATUS_ORDER}
     
     for item in items:
         status = item.get("status", "INVENTORY").upper()
@@ -104,39 +130,48 @@ def group_by_status(items):
     
     return buckets
 
-def render_bucket(title, items, console):
-    text = Text()
+def render_card(item, now, console):
+    name = item.get("itemName", "Unknown")[:30]
+    sale_price = item.get("salePrice", 0)
+    current_value = item.get("currentValue", 0)
+    marketplace = item.get("marketplace", "")
     
-    if not items:
-        text.append(f"[dim]-- empty --[/dim]\n")
-    else:
-        for item in items:
-            name = item.get("itemName", "Unknown")[:25]
-            price = item.get("salePrice", 0)
-            value = item.get("currentValue", 0)
-            date_paid = item.get("datePaid", "")
-            
-            days_ago = ""
-            if date_paid:
-                try:
-                    paid = int(date_paid)
-                    days = (datetime.now() - (datetime(1899, 12, 30) + timedelta(days=paid))).days
-                    days_ago = f"[dim]({days}d ago)[/dim]"
-                except:
-                    pass
-            
-            text.append(f"• {name}\n")
-            text.append(f"  $[yellow]{price}[/yellow] | Val: ${value} {days_ago}\n")
+    deadline, deadline_action = get_deadline_info(item, now)
+    urgency = get_urgency_color(deadline, now)
     
-    return Panel(text, title=f"[bold]{title}[/bold] ({len(items)})", border_style="blue", padding=(0, 1))
+    color_map = {
+        "green": "green",
+        "yellow": "yellow", 
+        "orange": "orange",
+        "red": "red bold"
+    }
+    
+    color = color_map[urgency]
+    
+    lines = []
+    lines.append(f"[bold {color}]{name}[/bold {color}]")
+    lines.append(f"  [bold yellow]${sale_price}[/bold yellow] | Val: [bold]${current_value}[/bold]")
+    
+    if marketplace:
+        lines.append(f"  [dim]{marketplace}[/dim]")
+    
+    if deadline:
+        days_left = (deadline - now).days
+        if days_left >= 0:
+            lines.append(f"  [bold {color}]{deadline_action}: {days_left}d[/bold {color}]")
+        else:
+            lines.append(f"  [bold red]{deadline_action}: OVERDUE![/bold red]")
+    
+    text = Text("\n".join(lines))
+    return Panel(text, border_style=urgency, padding=(1, 1), width=35)
 
 def main(once=False):
-    from datetime import timedelta
-    
-    console = Console()
+    console = Console(force_terminal=True, width=250)
+    now = datetime.now()
     
     while True:
         try:
+            now = datetime.now()
             items = fetch_sales()
             update_current_values(items)
             
@@ -144,23 +179,16 @@ def main(once=False):
             
             console.clear()
             
-            title = Text("Scrounger Sales Funnel", style="bold cyan", justify="center")
-            console.print(Panel(title, style="cyan"))
+            console.print(f"[bold cyan]Scrounger Sales Funnel[/bold cyan] [dim]{now.strftime('%H:%M:%S')}[/dim]")
             console.print()
             
-            row1 = ["INVENTORY", "DRAFT", "LISTED", "INTEREST", "AGREEMENT"]
-            row2 = ["PAID", "SHIPPED", "DELIVERED", "COMPLETE", "DISPUTE"]
-            
-            console.print("[bold]Active Sales[/bold]")
-            for status in row1:
-                console.print(render_bucket(status, buckets[status], console), end=" ")
-            console.print()
-            
-            for status in row2:
-                console.print(render_bucket(status, buckets[status], console), end=" ")
-            console.print()
-            
-            console.print(f"\n[dim]Updated: {datetime.now().strftime('%H:%M:%S')}[/dim]")
+            for status in STATUS_ORDER:
+                status_items = buckets[status]
+                if status_items:
+                    console.print(f"[bold magenta reverse]{status} ({len(status_items)})[/bold magenta reverse]")
+                    for item in status_items:
+                        console.print(render_card(item, now, console), end="")
+                    console.print()
             
             if once:
                 break
