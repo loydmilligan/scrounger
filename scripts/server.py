@@ -12,6 +12,8 @@ import json
 SHEET_NINJA_ENDPOINT = os.getenv("SHEET_NINJA_ENDPOINT_URL")
 SHEET_NINJA_API_KEY = os.getenv("SHEET_NINJA_API_KEY")
 
+FRONTEND_DIR = os.path.join(project_root, "frontend")
+
 class CORSRequestHandler(SimpleHTTPRequestHandler):
     def end_headers(self):
         self.send_header('Access-Control-Allow-Origin', '*')
@@ -28,9 +30,14 @@ class CORSRequestHandler(SimpleHTTPRequestHandler):
             self.send_header('Content-Type', 'application/json')
             self.end_headers()
             self.wfile.write(response.content)
+        elif self.path == '/' or self.path == '/kanban.html':
+            self.path = '/kanban.html'
+            SimpleHTTPRequestHandler.__init__(self, *args, directory=FRONTEND_DIR, **kwargs)
+            SimpleHTTPRequestHandler.do_GET(self)
         else:
             super().do_GET()
 
-print("Starting server on http://localhost:8001")
+print(f"Starting server on http://localhost:8001")
+print(f"Serving frontend from: {FRONTEND_DIR}")
 server = HTTPServer(('0.0.0.0', 8001), CORSRequestHandler)
 server.serve_forever()
