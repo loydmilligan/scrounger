@@ -26,7 +26,17 @@ sudo /usr/bin/Xorg :0 &
 sleep 2
 export DISPLAY=:0
 
-# Use xdotool to force fullscreen window
+# Start chromium and maximize window
 chromium --kiosk --incognito http://localhost:8001/kanban.html &
 sleep 3
+
+# Wait for window to appear and maximize it
+for i in 1 2 3 4 5; do
+    sleep 1
+    xdotool search --name chromium windowmap 2>/dev/null && break
+done
+
+xdotool search --name chromium key F11
+xdotool search --name chromium windowfocus
+sleep 1
 xdotool key F11
