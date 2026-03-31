@@ -8,5 +8,8 @@ pkill -f "server.py" 2>/dev/null
 nohup .venv/bin/python scripts/server.py > /tmp/kanban_server.log 2>&1 &
 sleep 2
 
-# Start X with Chromium in fullscreen kiosk mode
-exec sudo xinit chromium --kiosk --incognito http://localhost:8001/kanban.html
+# Start X server and Chromium
+sudo /usr/bin/Xorg :0 &
+sleep 2
+export DISPLAY=:0
+chromium --kiosk --incognito http://localhost:8001/kanban.html
