@@ -162,7 +162,7 @@ def render_card(item, now):
             lines.append(f"[bold red]OVERDUE![/bold red]")
     
     text = Text("\n".join(lines))
-    return Panel(text, border_style=urgency, padding=(1, 2), width=50)
+    return Panel(text, border_style=urgency, padding=(1, 1), width=28)
 
 def main(once=False):
     console = Console(force_terminal=True)
@@ -181,18 +181,22 @@ def main(once=False):
             console.print(f"[bold cyan reverse]  SCRQUINGER SALES FUNNEL  [/bold cyan reverse]  [dim]{now.strftime('%H:%M:%S')}[/dim]")
             console.print()
             
-            console.print("[bold magenta]════════════════════════════════════════════════════════════════════════════════════════════════════════════════════[/bold magenta]")
-            
+            header = ""
             for status in STATUS_ORDER:
-                items = buckets[status]
-                count = len(items)
-                console.print()
-                console.print(f"[bold magenta reverse] {status} ({count}) [/bold magenta reverse]")
-                if items:
-                    for item in items:
-                        console.print(render_card(item, now))
-                else:
-                    console.print("[dim]  -- empty --[/dim]")
+                count = len(buckets[status])
+                header += f"[bold magenta reverse] {status} ({count}) [/bold magenta reverse]  "
+            console.print(header)
+            
+            max_items = max(len(buckets[s]) for s in STATUS_ORDER)
+            for i in range(max_items):
+                row_str = ""
+                for status in STATUS_ORDER:
+                    items = buckets[status]
+                    if i < len(items):
+                        row_str += str(render_card(items[i], now)) + " "
+                    else:
+                        row_str += " " * 30 + " "
+                console.print(row_str)
             
             if once:
                 break
