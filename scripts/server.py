@@ -31,6 +31,6 @@ class CORSRequestHandler(SimpleHTTPRequestHandler):
         else:
             super().do_GET()
 
-print("Starting server on http://localhost:8000")
-server = HTTPServer(('0.0.0.0', 8000), CORSRequestHandler)
+print("Starting server on http://localhost:8001")
+server = HTTPServer(('0.0.0.0', 8001), CORSRequestHandler)
 server.serve_forever()

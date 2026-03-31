@@ -227,7 +227,7 @@
         }
         
         async function fetchData() {
-            const response = await fetch('http://localhost:8000/api/sales');
+            const response = await fetch('http://localhost:8001/api/sales');
             const data = await response.json();
             return data;
         }
