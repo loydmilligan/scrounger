@@ -4,7 +4,9 @@ import math
 from dotenv import load_dotenv
 import requests
 
-load_dotenv("/home/mmariani/Projects/scrounger/.env")
+script_dir = os.path.dirname(os.path.abspath(__file__))
+project_root = os.path.dirname(script_dir)
+load_dotenv(os.path.join(project_root, ".env"))
 from datetime import datetime, timedelta
 from rich.console import Console
 from rich.table import Table
