@@ -131,7 +131,7 @@ def group_by_status(items):
     return buckets
 
 def render_card(item, now, console):
-    name = item.get("itemName", "Unknown")[:30]
+    name = item.get("itemName", "Unknown")[:20]
     sale_price = item.get("salePrice", 0)
     current_value = item.get("currentValue", 0)
     marketplace = item.get("marketplace", "")
@@ -163,10 +163,10 @@ def render_card(item, now, console):
             lines.append(f"  [red]{deadline_action}: OVERDUE![/red]")
     
     text = Text("\n".join(lines))
-    return Panel(text, border_style=urgency, padding=(0, 1), width=30)
+    return Panel(text, border_style=urgency, padding=(0, 1), width=25)
 
 def main(once=False):
-    console = Console(force_terminal=True, width=180)
+    console = Console(force_terminal=True, width=120)
     now = datetime.now()
     
     while True:
