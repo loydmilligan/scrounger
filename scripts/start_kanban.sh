@@ -1,7 +1,12 @@
 #!/bin/bash
 cd /home/mmariani/scrounger
-.venv/bin/python scripts/server.py &
-SERVER_PID=$!
+
+# Kill any existing server
+pkill -f "server.py" 2>/dev/null
+
+# Start the server in background
+nohup .venv/bin/python scripts/server.py > /tmp/kanban_server.log 2>&1 &
 sleep 2
-xinit chromium --kiosk --incognito http://localhost:8001/kanban.html -- --screen 0 1920x1080
-kill $SERVER_PID 2>/dev/null
+
+# Start X with Chromium in fullscreen kiosk mode
+exec sudo xinit chromium --kiosk --incognito http://localhost:8001/kanban.html -- --screen 0 1920x1080
