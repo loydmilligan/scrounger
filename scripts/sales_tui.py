@@ -181,21 +181,21 @@ def main(once=False):
             console.print(f"[bold cyan reverse]  SCRQUINGER SALES FUNNEL  [/bold cyan reverse]  [dim]{now.strftime('%H:%M:%S')}[/dim]")
             console.print()
             
-            header = ""
             for status in STATUS_ORDER:
                 count = len(buckets[status])
-                header += f"[bold magenta reverse] {status} ({count}) [/bold magenta reverse]  "
-            console.print(header)
+                console.print(f"[bold magenta reverse] {status} ({count}) [/bold magenta reverse]", end=" ")
             console.print()
             
-            max_rows = max(len(buckets[s]) for s in STATUS_ORDER)
-            for i in range(max_rows):
+            max_items = max(len(buckets[s]) for s in STATUS_ORDER)
+            for i in range(max_items):
+                line = ""
                 for status in STATUS_ORDER:
-                    if i < len(buckets[status]):
-                        console.print(render_card(buckets[status][i], now), end=" ")
+                    items = buckets[status]
+                    if i < len(items):
+                        line += f"{render_card(items[i], now)} "
                     else:
-                        console.print(" " * 28, end=" ")
-                console.print()
+                        line += " " * 37
+                console.print(line)
             
             if once:
                 break
