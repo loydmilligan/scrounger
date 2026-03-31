@@ -123,6 +123,11 @@ def map_status_to_bucket(status):
         "CONFIRMED": "CONFIRMED",
         "COMPLETE": "COMPLETE",
         "ARCHIVED": "COMPLETE",
+        "INVENTORY": "AGREEMENT",
+        "DRAFT": "AGREEMENT",
+        "LISTED": "AGREEMENT",
+        "INTEREST": "AGREEMENT",
+        "DISPUTE": "COMPLETE",
     }
     return mapping.get(s, "AGREEMENT")
 
@@ -157,7 +162,7 @@ def render_card(item, now):
             lines.append(f"[bold red]OVERDUE![/bold red]")
     
     text = Text("\n".join(lines))
-    return Panel(text, border_style=urgency, padding=(0, 1), width=28)
+    return Panel(text, border_style=urgency, padding=(1, 1), width=35)
 
 def main(once=False):
     console = Console(force_terminal=True)
