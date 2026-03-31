@@ -1,0 +1,4 @@
+itemName,buyerName,buyerEmail,status,salePrice,datePurchase,retailPrice,currentValue,profit,marketplace,listingURL,dateListed,dateAgreement,datePaid,dateShipped,dateDelivered,dateComplete,shippingCost,paymentMethod,notes
+HiFiberry DAC Pro,TBD,TBD,PAID,35,07/09/2024,51,13.43,35,r/hardwareswap,,,,3/29/2026,,,,,,Shipping due 5 days after payment
+Orange Pi 5 16GB RAM,TBD,TBD,SHIPPED,120,11/18/2024,139,40.33,,r/homelabsales,,,,3/28/2026,3/30/2026,,,,PayPal G&S,"Shipping label printed 3/29/26, shipped 3/30 at 9am"
+Flipper Zero,TBD,TBD,DELIVERED,100,02/17/2021,150,30,,r/hardwareswap,,,,3/25/2026,3/27/2026,3/30/2026,,,PayPal G&S,Waiting for confirmation of sale on r/hardwareswap
