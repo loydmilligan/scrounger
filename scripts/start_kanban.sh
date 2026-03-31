@@ -21,22 +21,25 @@ kill_kanban
 nohup .venv/bin/python scripts/server.py > /tmp/kanban_server.log 2>&1 &
 sleep 2
 
-# Start X server and Chromium in true fullscreen
+# Start X server
 sudo /usr/bin/Xorg :0 &
 sleep 2
 export DISPLAY=:0
 
-# Start chromium and maximize window
+# Get screen resolution
+SCREEN_SIZE=$(xdotool getdisplaygeometry)
+SCREEN_W=$(echo $SCREEN_SIZE | cut -d' ' -f1)
+SCREEN_H=$(echo $SCREEN_SIZE | cut -d' ' -f2)
+
+# Start chromium
 chromium --kiosk --incognito http://localhost:8001/kanban.html &
-sleep 3
+sleep 4
 
-# Wait for window to appear and maximize it
-for i in 1 2 3 4 5; do
-    sleep 1
-    xdotool search --name chromium windowmap 2>/dev/null && break
-done
-
-xdotool search --name chromium key F11
-xdotool search --name chromium windowfocus
-sleep 1
-xdotool key F11
+# Find and resize Chromium window to full screen
+WINID=$(xdotool search --name chromium | head -1)
+if [ -n "$WINID" ]; then
+    xdotool windowsize $WINID $SCREEN_W $SCREEN_H
+    xdotool windowmove $WINID 0 0
+    xdotool windowfocus $WINID
+    xdotool key F11
+fi
