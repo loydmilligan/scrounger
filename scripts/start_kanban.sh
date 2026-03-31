@@ -4,7 +4,7 @@ cd /home/mmariani/scrounger
 kill_kanban() {
     pkill -f "server.py" 2>/dev/null
     pkill chromium 2>/dev/null
-    pkill matchbox-window-manager 2>/dev/null
+    pkill openbox 2>/dev/null
     echo "Killed kanban processes"
 }
 
@@ -15,7 +15,7 @@ case "$1" in
         ;;
 esac
 
-# Kill any existing server
+# Kill any existing
 kill_kanban
 
 # Start the server in background
@@ -27,19 +27,17 @@ sudo /usr/bin/Xorg :0 &
 sleep 2
 export DISPLAY=:0
 
-# Start matchbox window manager (handles window positioning)
-matchbox-window-manager -use-cursor yes &
-sleep 1
+# Start openbox window manager (handles fullscreen properly)
+openbox &
+sleep 2
 
-# Start chromium
+# Start chromium in kiosk mode
 chromium --kiosk --incognito http://localhost:8001/kanban.html &
 sleep 4
 
-# Get screen size and resize
-SCREEN_W=3440
-SCREEN_H=1440
+# Get screen size and resize chromium window
 WINID=$(xdotool search --class chromium | head -1)
 if [ -n "$WINID" ]; then
-    xdotool windowsize $WINID $SCREEN_W $SCREEN_H
+    xdotool windowsize $WINID 100% 100%
     xdotool windowmove $WINID 0 0
 fi
